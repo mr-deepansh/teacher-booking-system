@@ -5,34 +5,50 @@ import { ApiResponse } from "../utility/ApiResponse.js";
 import { ApiError } from "../utility/ApiError.js";
 
 const regTeacher = asyncHandler(async (req, res) => {
-  const { name, username, department, subject, email, password } = req.body;
+  try {
+    const { name, username, department, subject, email, password } = req.body;
 
-  if (
-    [name, username, department, subject, email, password].some(
-      (field) => !field || field.trim() === ""
-    )
-  ) {
-    throw new ApiError(400, "All fields are required");
+    if (
+      [name, username, department, subject, email, password].some(
+        (field) => !field || field.trim() === ""
+      )
+    ) {
+      throw new ApiError(400, "All fields are required");
+    }
+
+    const existedUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existedUser) {
+      throw new ApiError(409, "Username or email already exists");
+    }
+
+    const user = await User.create({
+      name,
+      username: username.toLowerCase(),
+      department,
+      subject,
+      email,
+      password,
+      role: "teacher",
+    });
+    console.log(user);
+
+    res
+      .status(201)
+      .json(
+        new ApiResponse(201, user, "Teacher registered successfully", true)
+      );
+  } catch (error) {
+    console.error("Error in signup:", error.message);
+    if (error instanceof ApiError) {
+      res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
-
-  const existedUser = await User.findOne({ $or: [{ username }, { email }] });
-  if (existedUser) {
-    throw new ApiError(409, "Username or email already exists");
-  }
-
-  const user = await User.create({
-    name,
-    username: username.toLowerCase(),
-    department,
-    subject,
-    email,
-    password,
-    role: "teacher",
-  });
-
-  res
-    .status(201)
-    .json(new ApiResponse(201, user, "Teacher registered successfully", true));
 });
 
 const updateTeacher = asyncHandler(async (req, res, next) => {
