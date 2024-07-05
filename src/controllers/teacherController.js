@@ -30,7 +30,7 @@ const regTeacher = asyncHandler(async (req, res) => {
       password,
       role: "teacher",
     });
-    console.log(user);
+    // console.log(user);
 
     res
       .status(201)

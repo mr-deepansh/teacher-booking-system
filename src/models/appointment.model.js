@@ -1,13 +1,11 @@
-import mongoose from "mongoose";
-
 const appointmentSchema = new mongoose.Schema(
   {
-    teacher: {
+    student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    student: {
+    teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -16,21 +14,23 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    startTime: {
+    date: {
       type: Date,
       required: true,
     },
-    endTime: {
-      type: Date,
+    time: {
+      type: String,
       required: true,
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "cancelled"],
+      enum: ["pending", "approved", "rejected", "completed"],
       default: "pending",
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 export const Appointment = mongoose.model("Appointment", appointmentSchema);
