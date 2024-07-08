@@ -4,7 +4,7 @@ import { asyncHandler } from "../utility/asyncHandler.js";
 import { ApiResponse } from "../utility/ApiResponse.js";
 import { ApiError } from "../utility/ApiError.js";
 import { Appointment } from "../models/appointment.model.js";
-import { generateToken } from "../validations/generateToken.js";
+import { generateToken } from "../middleware/generateToken.js";
 
 const registerStudent = asyncHandler(async (req, res) => {
   try {

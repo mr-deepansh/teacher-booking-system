@@ -1,4 +1,4 @@
-import { protect } from "../validations/auth.middleware.js";
+import { protect } from "../middleware/auth.middleware.js";
 import { Router } from "express";
 import {
   registerTeacher,
