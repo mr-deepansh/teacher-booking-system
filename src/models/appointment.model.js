@@ -35,4 +35,10 @@ const appointmentSchema = new mongoose.Schema(
   }
 );
 
+// Add a method to update appointment status
+appointmentSchema.methods.updateStatus = async function (newStatus) {
+  this.status = newStatus;
+  await this.save();
+};
+
 export const Appointment = mongoose.model("Appointment", appointmentSchema);

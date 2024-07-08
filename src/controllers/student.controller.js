@@ -6,10 +6,13 @@ import { ApiError } from "../utility/ApiError.js";
 import { Appointment } from "../models/appointment.model.js";
 import { generateToken } from "../middleware/generateToken.js";
 
+// @desc    Register a new student
+// @route   POST /api/v1/students/register
+// @access  Public
 const registerStudent = asyncHandler(async (req, res) => {
-  try {
-    const { fullName, email, password } = req.body;
+  const { fullName, email, password } = req.body;
 
+  try {
     const studentExists = await Student.findOne({ email });
 
     if (studentExists) {
@@ -32,11 +35,14 @@ const registerStudent = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Update student information
+// @route   PUT /api/v1/students/:id
+// @access  Private (Student)
 const updateStudent = asyncHandler(async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fullName, email } = req.body;
+  const { id } = req.params;
+  const { fullName, email } = req.body;
 
+  try {
     const student = await Student.findById(id);
 
     if (!student) {
@@ -56,10 +62,13 @@ const updateStudent = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Delete a student
+// @route   DELETE /api/v1/students/:id
+// @access  Private (Admin)
 const deleteStudent = asyncHandler(async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
+  try {
     const student = await Student.findById(id);
 
     if (!student) {
@@ -76,11 +85,14 @@ const deleteStudent = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Book an appointment with a teacher
+// @route   POST /api/v1/students/book-appointment
+// @access  Private (Student)
 const bookAppointment = asyncHandler(async (req, res) => {
-  try {
-    const { teacherId, date, time, purpose } = req.body;
-    const studentId = req.user._id;
+  const { teacherId, date, time, purpose } = req.body;
+  const studentId = req.user._id;
 
+  try {
     if (!teacherId || !date || !time || !purpose) {
       throw new ApiError(400, "All fields are required");
     }
@@ -101,6 +113,14 @@ const bookAppointment = asyncHandler(async (req, res) => {
 
     await appointment.save();
 
+    // Add appointment to student's appointments array
+    const student = await Student.findById(studentId);
+    if (!student) {
+      throw new ApiError(404, "Student not found");
+    }
+    student.appointments.push(appointment);
+    await student.save();
+
     res
       .status(201)
       .json(
@@ -111,10 +131,13 @@ const bookAppointment = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    View all appointments of a student
+// @route   GET /api/v1/students/appointments
+// @access  Private (Student)
 const viewAppointments = asyncHandler(async (req, res) => {
-  try {
-    const studentId = req.user._id;
+  const studentId = req.user._id;
 
+  try {
     const appointments = await Appointment.find({
       student: studentId,
     }).populate("teacher", "fullName email");

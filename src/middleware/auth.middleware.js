@@ -4,7 +4,20 @@ import { Teacher } from "../models/teacher.model.js";
 import { asyncHandler } from "../utility/asyncHandler.js";
 import { ApiError } from "../utility/ApiError.js";
 
-const protect = asyncHandler(async (req, res, next) => {
+const generateToken = (res, userId) => {
+  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: "30d",
+  });
+
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  });
+};
+
+const protect = async (req, res, next) => {
   try {
     const token = req.cookies.token;
 
@@ -23,15 +36,15 @@ const protect = asyncHandler(async (req, res, next) => {
 
     next();
   } catch (error) {
-    throw new ApiError(401, "Not authorized, token failed");
+    next(new ApiError(401, "Not authorized, token failed"));
   }
-});
+};
 
 const admin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
     next();
   } else {
-    throw new ApiError(401, "Not authorized as an admin");
+    next(new ApiError(401, "Not authorized as an admin"));
   }
 };
 
@@ -39,8 +52,8 @@ const teacher = (req, res, next) => {
   if (req.user && req.user.department && req.user.subject) {
     next();
   } else {
-    throw new ApiError(401, "Not authorized as a teacher");
+    next(new ApiError(401, "Not authorized as a teacher"));
   }
 };
 
-export { protect, admin, teacher };
+export { protect, admin, teacher, generateToken };
