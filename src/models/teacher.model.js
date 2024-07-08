@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const teacherSchema = new mongoose.Schema(
   {
@@ -7,6 +7,16 @@ const teacherSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    username: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
+    subject: {
+      type: String,
+      required: true,
     },
     department: {
       type: String,
@@ -58,5 +68,11 @@ teacherSchema.pre("save", async function (next) {
     return await bcrypt.compare(password, this.password);
   };
 });
+
+teacherSchema.methods.generateAccessToken = function () {
+  return jwt.sign({ _id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: "30d",
+  });
+};
 
 export const Teacher = mongoose.model("Teacher", teacherSchema);
