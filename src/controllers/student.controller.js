@@ -10,7 +10,7 @@ import { generateToken } from "../middleware/generateToken.js";
 // @route   POST /api/v1/students/register
 // @access  Public
 const registerStudent = asyncHandler(async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, grade } = req.body;
 
   try {
     const studentExists = await Student.findOne({ email });
@@ -23,6 +23,7 @@ const registerStudent = asyncHandler(async (req, res) => {
       fullName,
       email,
       password,
+      grade,
     });
 
     generateToken(res, student._id);
@@ -31,7 +32,16 @@ const registerStudent = asyncHandler(async (req, res) => {
       .status(201)
       .json(new ApiResponse(201, student, "Student registered successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error in signup:", error.message);
+    if (error instanceof ApiError) {
+      res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
 });
 
@@ -58,7 +68,16 @@ const updateStudent = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, student, "Student updated successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error in signup:", error.message);
+    if (error instanceof ApiError) {
+      res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
 });
 
@@ -75,13 +94,22 @@ const deleteStudent = asyncHandler(async (req, res) => {
       throw new ApiError(404, "Student not found");
     }
 
-    await student.remove();
+    await Student.findByIdAndDelete(id); // Corrected to use Student model directly
 
     res
       .status(200)
-      .json(new ApiResponse(200, null, "Student deleted successfully"));
+      .json(new ApiResponse(200, {}, "Student deleted successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error in deleting student:", error.message);
+    if (error instanceof ApiError) {
+      res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
 });
 
@@ -127,7 +155,16 @@ const bookAppointment = asyncHandler(async (req, res) => {
         new ApiResponse(201, appointment, "Appointment booked successfully")
       );
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error in signup:", error.message);
+    if (error instanceof ApiError) {
+      res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
 });
 
@@ -148,7 +185,16 @@ const viewAppointments = asyncHandler(async (req, res) => {
         new ApiResponse(200, appointments, "Appointments fetched successfully")
       );
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error in signup:", error.message);
+    if (error instanceof ApiError) {
+      res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
 });
 
