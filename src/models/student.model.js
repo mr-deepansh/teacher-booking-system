@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 const studentSchema = new mongoose.Schema(
   {
-    name: {
+    fullName: {
       type: String,
       required: true,
       trim: true,

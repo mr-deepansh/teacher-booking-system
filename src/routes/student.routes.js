@@ -14,7 +14,7 @@ const router = express.Router();
 router.post("/register", registerStudent);
 
 // Routes that require authentication (protected routes)
-router.use(protect);
+// router.use(protect);
 
 // Route to update student information
 router.put("/:id", updateStudent);
