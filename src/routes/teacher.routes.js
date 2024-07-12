@@ -19,17 +19,17 @@ const router = express.Router();
 // Public routes
 router.post("/register", registerTeacher);
 router.post("/login", loginTeacher);
-router.post("/logout", logoutTeacher);
 
 // Protected routes
 router.use(protect);
 router.get("/me", getCurrentTeacher);
+router.post("/logout", logoutTeacher);
 router.put("/update-details", updateTeacherDetails);
 router.put("/update-password", updateTeacherPassword);
 router.delete("/delete", deleteTeacher);
 router.post("/schedule-appointment", teacher, scheduleAppointment);
-router.put("/approve-appointment/:appointmentId", teacher, approveAppointment);
-router.put("/cancel-appointment/:appointmentId", teacher, cancelAppointment);
+router.put("/appointments/approve/:appointmentId", teacher, approveAppointment);
+router.put("/appointments/cancel/:appointmentId", teacher, cancelAppointment);
 router.get("/appointments", viewAppointments);
 
 export default router;

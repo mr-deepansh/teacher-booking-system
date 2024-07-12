@@ -7,15 +7,26 @@ import { ApiError } from "../utility/ApiError.js";
 import jwt from "jsonwebtoken";
 
 // Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: "30d",
-  });
+const generateAccessAndRefreshToken = async (teacherId) => {
+  try {
+    const user = await Teacher.findById(teacherId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating refresh and access token "
+    );
+  }
 };
 
 // Register a new teacher
 const registerTeacher = asyncHandler(async (req, res) => {
-  const { name, username, department, subject, email, password } = req.body;
+  const { name, username, department, subject, email, password, phone } =
+    req.body;
 
   if (
     [name, username, department, subject, email, password].some(
@@ -36,22 +47,27 @@ const registerTeacher = asyncHandler(async (req, res) => {
     name,
     username: username.toLowerCase(),
     department,
+    phone,
     subject,
     email,
     password,
     role: "teacher",
   });
 
-  const createdTeacher = await Teacher.findById(teacher._id).select(
-    "-password"
+  const registerTeacher = await Teacher.findById(teacher._id).select(
+    "-password -refreshToken"
   );
+  if (!registerTeacher) {
+    throw new ApiError(500, "Something went wrong while registering a user");
+  }
+  // console.log(teacher);
 
   res
     .status(201)
     .json(
       new ApiResponse(
         201,
-        createdTeacher,
+        registerTeacher,
         "Teacher registered successfully",
         true
       )
@@ -60,37 +76,97 @@ const registerTeacher = asyncHandler(async (req, res) => {
 
 // Login a teacher
 const loginTeacher = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const teacher = await Teacher.findOne({ email });
+    // Check if the teacher exists
+    const teacher = await Teacher.findOne({ email });
+    if (!teacher) {
+      throw new ApiError(404, "Teacher not found");
+    }
 
-  if (teacher && (await teacher.isPasswordCorrect(password))) {
-    const token = generateToken(teacher._id);
+    // Validate the password
+    const isPassValid = await teacher.isPasswordCorrect(password);
+    if (!isPassValid) {
+      throw new ApiError(400, "Incorrect Password");
+    }
 
-    res.status(200).json(
+    // Generate access and refresh tokens
+    const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
+      teacher._id
+    );
+
+    // Set cookies with tokens
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options);
+
+    // Respond with success message and tokens
+    res.json(
       new ApiResponse(
         200,
-        {
-          _id: teacher._id,
-          name: teacher.name,
-          username: teacher.username,
-          department: teacher.department,
-          subject: teacher.subject,
-          email: teacher.email,
-          token,
-        },
-        "Login successful",
+        { teacher, accessToken, refreshToken },
+        "Teacher Login successful",
         true
       )
     );
-  } else {
-    throw new ApiError(401, "Invalid email or password");
+  } catch (error) {
+    // Handle errors
+    if (error instanceof ApiError) {
+      return res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
 });
 
 // Logout a teacher
 const logoutTeacher = asyncHandler(async (req, res) => {
-  res.status(200).json(new ApiResponse(200, null, "Logout successful", true));
+  // try {
+  await Teacher.findByIdAndUpdate(
+    req.teacher._id,
+    {
+      $unset: {
+        refreshToken: 1,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  if (!updatedTeacher) {
+    throw new ApiError(404, "Teacher not found");
+  }
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  res.clearCookie("accessToken", options);
+  res.clearCookie("refreshToken", options);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Logout successful", true));
+  // } catch (error) {
+  //   if (error instanceof ApiError) {
+  //     return res
+  //       .status(error.statusCode)
+  //       .json(new ApiResponse(error.statusCode, null, error.message, false));
+  //   } else {
+  //     return res
+  //       .status(500)
+  //       .json(new ApiResponse(500, null, "Internal Server Error", false));
+  //   }
+  // }
 });
 
 // Get current teacher
@@ -115,8 +191,15 @@ const updateTeacherDetails = asyncHandler(async (req, res) => {
   }
 
   const teacher = await Teacher.findByIdAndUpdate(
-    req.user._id,
-    { name, department, subject, email },
+    req.teacher?._id,
+    {
+      $set: {
+        name,
+        department,
+        subject,
+        email,
+      },
+    },
     { new: true }
   ).select("-password");
 
@@ -140,18 +223,18 @@ const updateTeacherPassword = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Passwords do not match");
   }
 
-  const teacher = await Teacher.findById(req.user._id);
+  const teacher = await Teacher.findById(req.teacher?._id);
 
   if (!teacher || !(await teacher.isPasswordCorrect(oldPassword))) {
     throw new ApiError(401, "Invalid old password");
   }
 
   teacher.password = newPassword;
-  await teacher.save();
+  await teacher.save({ validateBeforeSave: false });
 
   res
     .status(200)
-    .json(new ApiResponse(200, null, "Password updated successfully", true));
+    .json(new ApiResponse(200, {}, "Password updated successfully", true));
 });
 
 // Delete teacher account

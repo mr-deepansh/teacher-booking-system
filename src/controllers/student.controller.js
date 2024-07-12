@@ -4,7 +4,6 @@ import { asyncHandler } from "../utility/asyncHandler.js";
 import { ApiResponse } from "../utility/ApiResponse.js";
 import { ApiError } from "../utility/ApiError.js";
 import { Appointment } from "../models/appointment.model.js";
-import { generateToken } from "../middleware/generateToken.js";
 
 // @desc    Register a new student
 // @route   POST /api/v1/students/register

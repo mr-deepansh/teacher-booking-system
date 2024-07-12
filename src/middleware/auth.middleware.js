@@ -1,47 +1,42 @@
 import jwt from "jsonwebtoken";
-import { Student } from "../models/student.model.js";
 import { Teacher } from "../models/teacher.model.js";
 import { ApiError } from "../utility/ApiError.js";
+import { asyncHandler } from "../utility/asyncHandler.js";
 
-const generateToken = (res, userId) => {
-  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: "30d",
-  });
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  });
-};
-
-const protect = async (req, res, next) => {
+const protect = asyncHandler(async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const token =
+      req.cookies?.accessToken ||
+      req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) {
-      throw new ApiError(401, "Not authorized, no token");
+      throw new ApiError(401, "Unauthorized request");
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Decoded token:", decoded);
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    const user =
-      (await Student.findById(decoded.id).select("-password")) ||
-      (await Teacher.findById(decoded.id).select("-password"));
+    const user = await Teacher.findById(decodedToken?._id).select(
+      "-password -refreshToken"
+    );
 
     if (!user) {
-      throw new ApiError(401, "Not authorized, user not found");
+      throw new ApiError(401, "Invalid access token");
     }
 
     req.user = user;
+
     next();
   } catch (error) {
-    console.error("Error in protect middleware:", error.message);
-    next(new ApiError(401, "Not authorized, token failed"));
+    const statusCode = error instanceof ApiError ? error.statusCode : 500;
+    const responseMessage =
+      error instanceof ApiError ? error.message : "Internal Server Error";
+
+    return res.status(statusCode).json({
+      success: false,
+      error: responseMessage,
+    });
   }
-};
+});
 
 const admin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
@@ -59,4 +54,4 @@ const teacher = (req, res, next) => {
   }
 };
 
-export { protect, admin, teacher, generateToken };
+export { protect, admin, teacher };
