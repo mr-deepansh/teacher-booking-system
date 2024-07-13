@@ -78,25 +78,17 @@ const registerTeacher = asyncHandler(async (req, res) => {
 const loginTeacher = asyncHandler(async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Check if the teacher exists
     const teacher = await Teacher.findOne({ email });
     if (!teacher) {
       throw new ApiError(404, "Teacher not found");
     }
-
-    // Validate the password
     const isPassValid = await teacher.isPasswordCorrect(password);
     if (!isPassValid) {
       throw new ApiError(400, "Incorrect Password");
     }
-
-    // Generate access and refresh tokens
     const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
       teacher._id
     );
-
-    // Set cookies with tokens
     const options = {
       httpOnly: true,
       secure: true,
@@ -105,8 +97,6 @@ const loginTeacher = asyncHandler(async (req, res) => {
       .status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options);
-
-    // Respond with success message and tokens
     res.json(
       new ApiResponse(
         200,
@@ -116,7 +106,6 @@ const loginTeacher = asyncHandler(async (req, res) => {
       )
     );
   } catch (error) {
-    // Handle errors
     if (error instanceof ApiError) {
       return res
         .status(error.statusCode)
@@ -131,42 +120,42 @@ const loginTeacher = asyncHandler(async (req, res) => {
 
 // Logout a teacher
 const logoutTeacher = asyncHandler(async (req, res) => {
-  // try {
-  await Teacher.findByIdAndUpdate(
-    req.teacher._id,
-    {
-      $unset: {
-        refreshToken: 1,
+  try {
+    const updatedTeacher = await Teacher.findByIdAndUpdate(
+      req.teacher?._id,
+      {
+        $unset: {
+          refreshToken: 1,
+        },
       },
-    },
-    {
-      new: true,
+      {
+        new: true,
+      }
+    );
+    console.log(updatedTeacher);
+    if (!updatedTeacher) {
+      throw new ApiError(404, "Teacher not found");
     }
-  );
-
-  if (!updatedTeacher) {
-    throw new ApiError(404, "Teacher not found");
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    res.clearCookie("accessToken", options);
+    res.clearCookie("refreshToken", options);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Logout successful", true));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return res
+        .status(error.statusCode)
+        .json(new ApiResponse(error.statusCode, null, error.message, false));
+    } else {
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Internal Server Error", false));
+    }
   }
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
-  res.clearCookie("accessToken", options);
-  res.clearCookie("refreshToken", options);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Logout successful", true));
-  // } catch (error) {
-  //   if (error instanceof ApiError) {
-  //     return res
-  //       .status(error.statusCode)
-  //       .json(new ApiResponse(error.statusCode, null, error.message, false));
-  //   } else {
-  //     return res
-  //       .status(500)
-  //       .json(new ApiResponse(500, null, "Internal Server Error", false));
-  //   }
-  // }
 });
 
 // Get current teacher
