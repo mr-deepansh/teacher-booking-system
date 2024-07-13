@@ -115,5 +115,4 @@ teacherSchema.methods.generateRefreshToken = function () {
     }
   );
 };
-
 export const Teacher = mongoose.model("Teacher", teacherSchema);

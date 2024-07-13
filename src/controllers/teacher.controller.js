@@ -122,7 +122,7 @@ const loginTeacher = asyncHandler(async (req, res) => {
 const logoutTeacher = asyncHandler(async (req, res) => {
   try {
     const updatedTeacher = await Teacher.findByIdAndUpdate(
-      req.teacher?._id,
+      req.user?._id,
       {
         $unset: {
           refreshToken: 1,
